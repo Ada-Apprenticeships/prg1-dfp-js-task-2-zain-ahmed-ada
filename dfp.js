@@ -1,42 +1,49 @@
 const { log } = require("console");
 const fs = require("fs");
 
-// function deleteExistingOutputFile() {
-// 	//
-// }
+const deleteFileIfExists = (filePath) => {
+	if (fs.existsSync(filePath)) {
+		fs.unlinkSync(filePath);
+	}
+};
 
-function parseFile(inputData, outData, delimiter = ";") {
+// Function to read an input file and return its content as an array of lines
+const readInputFile = (filePath) => {
+	if (!fs.existsSync(filePath)) {
+		throw new Error(`File does not exist: ${filePath}. Please try again.`);
+	}
+	return fs.readFileSync(filePath, "utf-8").split(/\n/); // Read file and split into lines
+};
+
+// Function to process a single line of input
+const processLine = (line, delimiter) => {
+	const splitLine = line.split(delimiter);
+	const sentiment = splitLine[1].trim();
+	const review = splitLine[0].trim().substring(0, 20);
+	return `${sentiment}${delimiter}${review}`;
+};
+
+// Function to parse an input file and output the processed data to a new file
+const parseFile = (inputData, outData, delimiter = ";") => {
 	if (!fs.existsSync(inputData)) {
-		return -1;
+		// Check if the input file exists
+		return -1; // Return -1 if the input file doesn't exist
 	}
 
-	if (fs.existsSync(outData)) {
-		fs.unlinkSync(outData);
-	}
+	deleteFileIfExists(outData);
 
-	const data = fs.readFileSync(inputData, "utf-8");
-	const lines = data.split(/\n/);
-	let count = 0;
+	const lines = readInputFile(inputData);
+	const processedData = lines
+		.slice(1) // Ignore the first line (header)
+		.map((line) => processLine(line, delimiter))
+		.join("\n");
 
-	for (let i = 1; i < lines.length; i++) {
-		let line = lines[i].split(delimiter);
+	fs.appendFileSync(outData, processedData + "\n");
 
-		// const [review, sentiment] = lines[i].split(delimiter).map(item => item.trim())
-		let sentiment = line[1].trim();
-		let review = line[0].trim();
-		review = review.substring(0, 20);
-
-		let newData = `${sentiment}${delimiter}${review}\n`;
-		fs.appendFileSync(outData, newData);
-		count++;
-	}
-	return count;
-}
+	return lines.length - 1; // Return the count of processed lines (total lines minus the header)
+};
 
 // Leave this code here for the automated tests
 module.exports = {
 	parseFile,
 };
-
-//deleteExistingOutputFile();
-parseFile("./datafile.csv", "./outputfile.csv");
